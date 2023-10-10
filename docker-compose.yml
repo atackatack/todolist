@@ -1,0 +1,34 @@
+version: '3.9'
+services:
+  db:
+    image: "postgres:14.5-alpine"
+    ports:
+      - "5400:5432"
+    environment:
+      - POSTGRES_DB=postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=qwerty
+    healthcheck:
+      test: pg_isready -U postgres -d postgres
+      interval: 10s
+      timeout: 30s
+      retries: 5
+
+  migrate:
+    image: migrate/migrate
+    volumes:
+      - ./schema:/migrations
+    command: ["-path", "/migrations", "-database", "postgres://postgres:qwerty@db:5432/postgres?sslmode=disable", "up"]
+    restart: "on-failure"
+    depends_on:
+      - db
+    links:
+      - db
+
+  app:
+    build: ./
+    command: ./app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
